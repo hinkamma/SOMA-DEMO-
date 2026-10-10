@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }
+  
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #fcf9f8;
+    color: #1b1c1c;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Material symbols utility */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'liga';
+}
+
+/* Color palettes corresponding to design system tokens */
+:root {
+  --surface: #fcf9f8;
+  --surface-lowest: #ffffff;
+  --surface-low: #f6f3f2;
+  --surface-container: #f0eded;
+  --surface-high: #eae7e7;
+  --surface-highest: #e5e2e1;
+  --primary: #ab3500;
+  --primary-container: #ff6b35;
+  --on-primary: #ffffff;
+  --secondary: #4b5d8f;
+  --secondary-container: #b3c5fe;
+  --secondary-fixed: #dae1ff;
+  --on-secondary-fixed: #011848;
+  --tertiary: #006c4c;
+  --tertiary-fixed: #96f5ca;
+  --on-tertiary-fixed: #002115;
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  --outline: #8d7168;
+}

@@ -1,0 +1,6 @@
+{
+  "name": "SOMA Éducation - Espace Censeur & Gestion Pédagogique",
+  "description": "Portail académique et supervision du corps enseignant selon l'approche par compétences (APC) du MINESEC.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
