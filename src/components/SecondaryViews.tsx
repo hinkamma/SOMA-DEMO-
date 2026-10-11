@@ -32,6 +32,7 @@ interface SecondaryViewsProps {
   onToggleJustified: (absId: string) => void;
   onAddPayment: (payment: PaymentReceipt, updatedStudent: Student) => void;
   onSendSmsRelance: (count: number) => void;
+  onValidateAppelBatch?: (data: any) => void;
 }
 
 export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
@@ -51,6 +52,7 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
   onToggleJustified,
   onAddPayment,
   onSendSmsRelance,
+  onValidateAppelBatch,
 }) => {
   // Medical & Infirmerie State
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>(INITIAL_MEDICAL_RECORDS);
@@ -102,12 +104,14 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
   if (currentScreen === 'surveillance-discipline') {
     return (
       <SurveillanceDisciplineView
+        teachers={teachers}
         students={students}
         absences={absences}
         sanctions={sanctions}
         onAddAbsence={onAddAbsence}
         onAddSanction={onAddSanction}
         onToggleJustified={onToggleJustified}
+        onValidateAppelBatch={onValidateAppelBatch}
       />
     );
   }

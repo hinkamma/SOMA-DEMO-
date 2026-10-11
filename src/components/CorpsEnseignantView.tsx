@@ -13,6 +13,7 @@ interface CorpsEnseignantViewProps {
   onOpenAuditModal: () => void;
   onOpenInspectionModal: () => void;
   onOpenEmargementModal: () => void;
+  onOpenAppel?: (teacher: Teacher) => void;
 }
 
 export const CorpsEnseignantView: React.FC<CorpsEnseignantViewProps> = ({
@@ -26,6 +27,7 @@ export const CorpsEnseignantView: React.FC<CorpsEnseignantViewProps> = ({
   onOpenAuditModal,
   onOpenInspectionModal,
   onOpenEmargementModal,
+  onOpenAppel,
 }) => {
   const [localSearch, setLocalSearch] = useState('');
   const [selectedDept, setSelectedDept] = useState('all');
@@ -188,6 +190,17 @@ export const CorpsEnseignantView: React.FC<CorpsEnseignantViewProps> = ({
                 <span>États des Heures Complémentaires</span>
               </button>
             </div>
+          )}
+
+          {onOpenAppel && (
+            <button
+              onClick={() => onOpenAppel(teachers[0])}
+              className="inline-flex items-center gap-1.5 px-3.5 h-10 rounded-lg bg-[#006c4c] text-white text-[13px] font-bold shadow-md hover:brightness-110 active:scale-95 transition-all"
+              title="L'enseignant effectue l'appel numérique pour ses classes affectées"
+            >
+              <span className="material-symbols-outlined text-[19px]">checklist_rtl</span>
+              <span>📋 Faire l'Appel de Cours</span>
+            </button>
           )}
 
           <button
@@ -689,6 +702,16 @@ export const CorpsEnseignantView: React.FC<CorpsEnseignantViewProps> = ({
                       {/* Action buttons */}
                       <td className="py-3.5 px-6 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {onOpenAppel && (
+                            <button
+                              onClick={() => onOpenAppel(t)}
+                              title={`Faire l'appel pour ${t.name} (ses classes affectées)`}
+                              className="px-2.5 py-1 rounded-lg bg-[#006c4c]/10 text-[#006c4c] hover:bg-[#006c4c] hover:text-white transition-all text-[11px] font-bold flex items-center gap-1 mr-1"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">how_to_reg</span>
+                              <span>Appel</span>
+                            </button>
+                          )}
                           {isLate && (
                             <button
                               onClick={() => onOpenBatchSms(t)}

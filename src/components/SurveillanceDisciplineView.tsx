@@ -1,29 +1,53 @@
 import React, { useState, useMemo } from 'react';
-import { AbsenceRecord, DisciplineSanction, Student } from '../types';
+import { AbsenceRecord, DisciplineSanction, Student, Teacher } from '../types';
 import { CLASSES_LIST } from '../data/mockData';
 import { BilletEntreeModal } from './BilletEntreeModal';
+import { FaireAppelModal } from './FaireAppelModal';
 
 interface SurveillanceDisciplineViewProps {
+  teachers?: Teacher[];
   students: Student[];
   absences: AbsenceRecord[];
   sanctions: DisciplineSanction[];
   onAddAbsence: (abs: AbsenceRecord) => void;
   onAddSanction: (sanc: DisciplineSanction) => void;
   onToggleJustified: (absId: string) => void;
+  onValidateAppelBatch?: (data: {
+    teacher: Teacher;
+    className: string;
+    subject: string;
+    date: string;
+    timeSlot: string;
+    durationHours: number;
+    courseTopic: string;
+    notifyParents: boolean;
+    records: {
+      student: Student;
+      status: 'present' | 'absent' | 'retard' | 'infirmerie';
+      motif: string;
+      lateMinutes?: number;
+    }[];
+  }) => void;
 }
 
 export const SurveillanceDisciplineView: React.FC<SurveillanceDisciplineViewProps> = ({
+  teachers = [],
   students,
   absences,
   sanctions,
   onAddAbsence,
   onAddSanction,
   onToggleJustified,
+  onValidateAppelBatch,
 }) => {
   const [activeTab, setActiveTab] = useState<'absences' | 'conduite' | 'billets' | 'stats'>('absences');
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [filterJustified, setFilterJustified] = useState<'all' | 'justified' | 'unjustified'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Roll call (Appel en classe) state
+  const [showAppelModal, setShowAppelModal] = useState(false);
+  const [activeTeacherForAppel, setActiveTeacherForAppel] = useState<string | undefined>(undefined);
 
   // Selected absence for printing ticket
   const [selectedAbsenceForTicket, setSelectedAbsenceForTicket] = useState<AbsenceRecord | null>(null);
@@ -148,17 +172,28 @@ export const SurveillanceDisciplineView: React.FC<SurveillanceDisciplineViewProp
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => {
+              setActiveTeacherForAppel(undefined);
+              setShowAppelModal(true);
+            }}
+            className="px-4 py-2.5 rounded-lg bg-[#006c4c] text-white text-[12.5px] font-bold flex items-center gap-1.5 shadow-md hover:brightness-110 active:scale-95 transition-all"
+            title="L'enseignant effectue l'appel numérique pour ses classes affectées"
+          >
+            <span className="material-symbols-outlined text-[19px]">checklist_rtl</span>
+            <span>📋 Faire l'Appel de Cours (Enseignant)</span>
+          </button>
           <button
             onClick={() => setShowAddAbsenceModal(true)}
-            className="px-4 py-2.5 rounded-lg bg-[#ff6b35] text-white text-[12.5px] font-bold flex items-center gap-1.5 shadow-sm hover:brightness-105"
+            className="px-3.5 py-2.5 rounded-lg bg-[#ff6b35] text-white text-[12.5px] font-bold flex items-center gap-1.5 shadow-sm hover:brightness-105"
           >
             <span className="material-symbols-outlined text-[18px]">event_busy</span>
             <span>+ Déclarer une Absence</span>
           </button>
           <button
             onClick={() => setShowAddSanctionModal(true)}
-            className="px-4 py-2.5 rounded-lg bg-[#011848] text-white text-[12.5px] font-bold flex items-center gap-1.5 shadow-sm hover:brightness-110"
+            className="px-3.5 py-2.5 rounded-lg bg-[#011848] text-white text-[12.5px] font-bold flex items-center gap-1.5 shadow-sm hover:brightness-110"
           >
             <span className="material-symbols-outlined text-[18px]">gavel</span>
             <span>+ Infliger Sanction</span>
@@ -269,6 +304,39 @@ export const SurveillanceDisciplineView: React.FC<SurveillanceDisciplineViewProp
           ======================================================== */}
       {activeTab === 'absences' && (
         <div className="flex flex-col gap-4">
+          {/* Pedagogical roll call info card */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-[#011848]/5 via-[#4b5d8f]/10 to-[#ff6b35]/10 border border-[#4b5d8f]/20 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#006c4c] text-white flex items-center justify-center shrink-0 shadow-sm">
+                <span className="material-symbols-outlined text-[22px]">how_to_reg</span>
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] font-extrabold text-[#1b1c1c]">
+                    Appel en Classe par les Enseignants (Par Heure de Cours)
+                  </span>
+                  <span className="px-2 py-0.2 rounded-full bg-[#96f5ca] text-[#002115] text-[10.5px] font-bold">
+                    Affectations Filtrées
+                  </span>
+                </div>
+                <p className="text-[12px] text-[#594139] leading-snug mt-0.5 max-w-2xl">
+                  Chaque professeur effectue son appel en son heure de cours. Il ne voit que les <strong>classes qui lui ont été préalablement affectées</strong>, sans être encombré par les autres classes. Toutes les absences et retards validés sont aussitôt centralisés ici et notifiés aux parents.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setActiveTeacherForAppel(undefined);
+                setShowAppelModal(true);
+              }}
+              className="px-4 py-2 rounded-lg bg-[#006c4c] text-white text-[12px] font-bold flex items-center gap-1.5 shadow hover:brightness-110 shrink-0 self-start md:self-center transition-all"
+            >
+              <span className="material-symbols-outlined text-[17px]">checklist_rtl</span>
+              <span>Lancer une Feuille d'Appel</span>
+            </button>
+          </div>
+
           {/* Filter Bar */}
           <div className="bg-white p-3.5 rounded-xl border border-[#f0eded] shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
             <div className="flex items-center gap-2 w-full md:w-auto flex-1">
@@ -922,6 +990,54 @@ export const SurveillanceDisciplineView: React.FC<SurveillanceDisciplineViewProp
           </div>
         </div>
       )}
+
+      {/* Roll Call Modal strictly for assigned classes */}
+      <FaireAppelModal
+        isOpen={showAppelModal}
+        onClose={() => {
+          setShowAppelModal(false);
+          setActiveTeacherForAppel(undefined);
+        }}
+        teachers={teachers}
+        students={students}
+        initialTeacherId={activeTeacherForAppel}
+        onValidateAppel={(data) => {
+          if (onValidateAppelBatch) {
+            onValidateAppelBatch(data);
+          } else {
+            // Fallback: register absences
+            data.records.forEach((rec, idx) => {
+              if (rec.status === 'absent') {
+                onAddAbsence({
+                  id: `abs-${Date.now()}-${idx}`,
+                  studentName: rec.student.name,
+                  matricule: rec.student.matricule,
+                  className: data.className,
+                  date: data.date,
+                  hoursCount: data.durationHours,
+                  motif: rec.motif || `Absence constatée au cours de ${data.subject} (${data.timeSlot})`,
+                  isJustified: false,
+                  ticketIssued: false,
+                  registeredBy: `${data.teacher.name} (Professeur)`,
+                });
+              } else if (rec.status === 'retard') {
+                onAddAbsence({
+                  id: `retard-${Date.now()}-${idx}`,
+                  studentName: rec.student.name,
+                  matricule: rec.student.matricule,
+                  className: data.className,
+                  date: data.date,
+                  hoursCount: 1,
+                  motif: `Retard de ${rec.lateMinutes || 15} min au cours de ${data.subject}`,
+                  isJustified: false,
+                  ticketIssued: false,
+                  registeredBy: `${data.teacher.name} (Professeur)`,
+                });
+              }
+            });
+          }
+        }}
+      />
     </div>
   );
 };

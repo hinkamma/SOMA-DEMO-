@@ -33,6 +33,7 @@ import { ExportMenuModal } from './components/ExportMenuModal';
 import { AuditHoursModal } from './components/AuditHoursModal';
 import { InspectionDossierModal } from './components/InspectionDossierModal';
 import { EmargementModal } from './components/EmargementModal';
+import { FaireAppelModal } from './components/FaireAppelModal';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -108,6 +109,8 @@ export default function App() {
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
   const [isEmargementModalOpen, setIsEmargementModalOpen] = useState(false);
+  const [isGlobalAppelOpen, setIsGlobalAppelOpen] = useState(false);
+  const [globalAppelTeacherId, setGlobalAppelTeacherId] = useState<string | undefined>(undefined);
 
   // Notification Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -222,6 +225,95 @@ export default function App() {
     showToast(`${count} SMS de relance ministérielle transmis avec succès.`);
   };
 
+  // Open roll call modal for teacher (with strictly their assigned classes)
+  const handleOpenAppelForTeacher = (targetTeacher?: Teacher) => {
+    setGlobalAppelTeacherId(targetTeacher ? targetTeacher.id : undefined);
+    setIsGlobalAppelOpen(true);
+  };
+
+  // Process batch roll call results
+  const handleBatchAppel = (data: {
+    teacher: Teacher;
+    className: string;
+    subject: string;
+    date: string;
+    timeSlot: string;
+    durationHours: number;
+    courseTopic: string;
+    notifyParents: boolean;
+    records: {
+      student: Student;
+      status: 'present' | 'absent' | 'retard' | 'infirmerie';
+      motif: string;
+      lateMinutes?: number;
+    }[];
+  }) => {
+    const newAbsences: AbsenceRecord[] = [];
+    let absentsCount = 0;
+    let retardsCount = 0;
+
+    data.records.forEach((rec, idx) => {
+      if (rec.status === 'absent') {
+        absentsCount++;
+        newAbsences.push({
+          id: `abs-${Date.now()}-${idx}`,
+          studentName: rec.student.name,
+          matricule: rec.student.matricule,
+          className: data.className,
+          date: data.date,
+          hoursCount: data.durationHours,
+          motif: rec.motif || `Absence non motivée constatée à l’appel (${data.subject}, ${data.timeSlot})`,
+          isJustified: false,
+          ticketIssued: false,
+          registeredBy: `${data.teacher.name} (Professeur)`,
+        });
+      } else if (rec.status === 'retard') {
+        retardsCount++;
+        newAbsences.push({
+          id: `retard-${Date.now()}-${idx}`,
+          studentName: rec.student.name,
+          matricule: rec.student.matricule,
+          className: data.className,
+          date: data.date,
+          hoursCount: 1,
+          motif: `Retard de ${rec.lateMinutes || 15} min au cours de ${data.subject} (${data.timeSlot})`,
+          isJustified: false,
+          ticketIssued: false,
+          registeredBy: `${data.teacher.name} (Professeur)`,
+        });
+      }
+    });
+
+    if (newAbsences.length > 0) {
+      setAbsences((prev) => [...newAbsences, ...prev]);
+
+      setStudents((prev) =>
+        prev.map((s) => {
+          const matchAbs = newAbsences.find(
+            (a) => a.studentName.toLowerCase() === s.name.toLowerCase() || a.matricule === s.matricule
+          );
+          if (matchAbs) {
+            return {
+              ...s,
+              unjustifiedAbsencesHours: s.unjustifiedAbsencesHours + matchAbs.hoursCount,
+              conductScore: Math.max(0, s.conductScore - matchAbs.hoursCount * 0.2),
+            };
+          }
+          return s;
+        })
+      );
+    }
+
+    const notifText =
+      data.notifyParents && absentsCount > 0
+        ? ` • ${absentsCount} notification(s) envoyée(s) aux parents`
+        : '';
+
+    showToast(
+      `Appel de ${data.className} validé par ${data.teacher.name} (${absentsCount} absent(s), ${retardsCount} retard(s))${notifText}.`
+    );
+  };
+
   // Notification action click
   const handleNotificationAction = (notif: NotificationItem) => {
     if (notif.id === 'notif-1') {
@@ -264,6 +356,7 @@ export default function App() {
           onNavigate={(screen) => setCurrentScreen(screen)}
           mobileOpen={mobileSidebarOpen}
           onCloseMobile={() => setMobileSidebarOpen(false)}
+          onOpenAppel={() => handleOpenAppelForTeacher()}
         />
 
         {/* Main Content Area */}
@@ -277,6 +370,11 @@ export default function App() {
             onYearChange={setAcademicYear}
             onOpenMobileMenu={() => setMobileSidebarOpen(true)}
             onActionClick={handleNotificationAction}
+            onOpenAppel={() => handleOpenAppelForTeacher()}
+            onMarkAllNotificationsRead={() => {
+              setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+              showToast('Toutes les alertes ont été marquées comme lues.');
+            }}
           />
 
           {/* Page Content Body */}
@@ -296,6 +394,7 @@ export default function App() {
                 onOpenAuditModal={() => setIsAuditModalOpen(true)}
                 onOpenInspectionModal={() => setIsInspectionModalOpen(true)}
                 onOpenEmargementModal={() => setIsEmargementModalOpen(true)}
+                onOpenAppel={handleOpenAppelForTeacher}
               />
             ) : (
               <SecondaryViews
@@ -315,6 +414,7 @@ export default function App() {
                 onToggleJustified={handleToggleJustified}
                 onAddPayment={handleAddPayment}
                 onSendSmsRelance={handleSendSmsRelance}
+                onValidateAppelBatch={handleBatchAppel}
               />
             )}
           </main>
@@ -333,6 +433,7 @@ export default function App() {
             setSmsTargetTeacher(t);
             setIsBatchSmsOpen(true);
           }}
+          onOpenAppel={handleOpenAppelForTeacher}
         />
 
         {/* Add Teacher Modal */}
@@ -387,6 +488,19 @@ export default function App() {
           isOpen={isEmargementModalOpen}
           onClose={() => setIsEmargementModalOpen(false)}
           teachers={teachers}
+        />
+
+        {/* Modal Faire l'Appel de Cours (Enseignant - restreint exclusivement à ses classes affectées) */}
+        <FaireAppelModal
+          isOpen={isGlobalAppelOpen}
+          onClose={() => {
+            setIsGlobalAppelOpen(false);
+            setGlobalAppelTeacherId(undefined);
+          }}
+          teachers={teachers}
+          students={students}
+          initialTeacherId={globalAppelTeacherId}
+          onValidateAppel={handleBatchAppel}
         />
       </div>
     </ErrorBoundary>

@@ -7,6 +7,7 @@ interface TeacherProfileDrawerProps {
   onClose: () => void;
   onEdit: (teacher: Teacher) => void;
   onSendSms: (teacher: Teacher) => void;
+  onOpenAppel?: (teacher: Teacher) => void;
 }
 
 export const TeacherProfileDrawer: React.FC<TeacherProfileDrawerProps> = ({
@@ -15,6 +16,7 @@ export const TeacherProfileDrawer: React.FC<TeacherProfileDrawerProps> = ({
   onClose,
   onEdit,
   onSendSms,
+  onOpenAppel,
 }) => {
   if (!isOpen || !teacher) return null;
 
@@ -245,20 +247,35 @@ export const TeacherProfileDrawer: React.FC<TeacherProfileDrawerProps> = ({
         </div>
 
         {/* Drawer Footer Actions */}
-        <div className="pt-4 border-t border-[#f0eded] flex items-center justify-between gap-3 mt-6">
+        <div className="pt-4 border-t border-[#f0eded] flex items-center justify-between gap-2.5 mt-6 flex-wrap">
           <button
             onClick={onClose}
             className="px-4 py-2.5 rounded-lg bg-[#eae7e7] text-[#1b1c1c] text-[13px] font-bold hover:bg-[#e5e2e1] transition-all"
           >
             Fermer
           </button>
-          <button
-            onClick={() => onEdit(teacher)}
-            className="px-5 py-2.5 rounded-lg bg-[#4b5d8f] text-white text-[13px] font-bold hover:brightness-110 transition-all flex items-center gap-1.5 shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[18px]">edit_calendar</span>
-            <span>Modifier Attributions</span>
-          </button>
+
+          <div className="flex items-center gap-2">
+            {onOpenAppel && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenAppel(teacher);
+                }}
+                className="px-4 py-2.5 rounded-lg bg-[#006c4c] text-white text-[13px] font-bold hover:brightness-110 transition-all flex items-center gap-1.5 shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[18px]">checklist_rtl</span>
+                <span>Faire l'Appel ({teacher.classes.length} classes)</span>
+              </button>
+            )}
+            <button
+              onClick={() => onEdit(teacher)}
+              className="px-4 py-2.5 rounded-lg bg-[#4b5d8f] text-white text-[13px] font-bold hover:brightness-110 transition-all flex items-center gap-1.5 shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[18px]">edit_calendar</span>
+              <span>Modifier</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

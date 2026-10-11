@@ -4,12 +4,14 @@ import { NotificationItem } from '../types';
 interface HeaderProps {
   notifications: NotificationItem[];
   onOpenNotifications?: () => void;
+  onMarkAllNotificationsRead?: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onOpenMobileMenu?: () => void;
   academicYear: string;
   onYearChange: (year: string) => void;
   onActionClick?: (notif: NotificationItem) => void;
+  onOpenAppel?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,10 +22,14 @@ export const Header: React.FC<HeaderProps> = ({
   academicYear,
   onYearChange,
   onActionClick,
+  onOpenAppel,
+  onMarkAllNotificationsRead,
 }) => {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [shiftX, setShiftX] = useState(0);
   const notifRef = useRef<HTMLDivElement>(null);
+  const notifDropdownRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -40,6 +46,38 @@ export const Header: React.FC<HeaderProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Recenter and clamp the notification popover horizontally relative to the icon
+  useEffect(() => {
+    if (!notifOpen) {
+      setShiftX(0);
+      return;
+    }
+
+    const adjustPosition = () => {
+      if (!notifRef.current || !notifDropdownRef.current) return;
+      const dropRect = notifDropdownRef.current.getBoundingClientRect();
+      const padding = 12;
+
+      // Currently centered with left: 50%, translateX(-50% + currentShift)
+      const overflowRight = dropRect.right - (window.innerWidth - padding);
+      const overflowLeft = padding - dropRect.left;
+
+      if (overflowRight > 0) {
+        setShiftX((prev) => prev - overflowRight);
+      } else if (overflowLeft > 0) {
+        setShiftX((prev) => prev + overflowLeft);
+      }
+    };
+
+    setShiftX(0);
+    const raf = requestAnimationFrame(adjustPosition);
+    window.addEventListener('resize', adjustPosition);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', adjustPosition);
+    };
+  }, [notifOpen]);
 
   return (
     <header className="fixed top-0 left-0 lg:left-72 right-0 h-16 bg-[#fcf9f8]/95 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-4 sm:px-6 lg:px-8 border-b border-[#f0eded]">
@@ -101,7 +139,19 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Right side: Notifications & User profile */}
-      <div className="flex items-center gap-2 sm:gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Quick Faire l'Appel button */}
+        {onOpenAppel && (
+          <button
+            onClick={onOpenAppel}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#006c4c] text-white text-[12px] font-bold shadow-sm hover:brightness-110 active:scale-95 transition-all"
+            title="L'enseignant fait l'appel en classe (uniquement ses classes affectées)"
+          >
+            <span className="material-symbols-outlined text-[17px]">checklist_rtl</span>
+            <span className="hidden sm:inline">Faire l'Appel</span>
+          </button>
+        )}
+
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
           <button
@@ -117,56 +167,87 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </button>
 
-          {/* Notifications Dropdown */}
+          {/* Notifications Dropdown - Centered horizontally from its origin icon */}
           {notifOpen && (
-            <div className="absolute right-0 top-12 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-[#f0eded] z-50 p-3 flex flex-col gap-2">
+            <div
+              ref={notifDropdownRef}
+              style={{
+                transform: `translateX(calc(-50% + ${shiftX}px))`,
+              }}
+              className="absolute left-1/2 top-12 w-[calc(100vw-24px)] sm:w-96 max-w-[420px] bg-white rounded-2xl shadow-2xl border border-[#eae5e4] z-50 p-3 flex flex-col gap-2 transition-all duration-150"
+            >
+              {/* Arrow pointer positioned directly aligned with the notification icon */}
+              <div
+                className="absolute -top-[6px] left-1/2 w-3.5 h-3.5 bg-white border-t border-l border-[#eae5e4] shadow-[-1px_-1px_2px_rgba(0,0,0,0.02)] z-10 pointer-events-none"
+                style={{
+                  transform: `translateX(calc(-50% - ${shiftX}px)) rotate(45deg)`,
+                }}
+              />
+
               <div className="flex items-center justify-between px-2 pb-2 border-b border-[#f0eded]">
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-[14px] text-[#1b1c1c]">Alertes Pédagogiques</span>
-                  <span className="px-1.5 py-0.5 rounded bg-[#dae1ff] text-[#011848] text-[10px] font-bold">
-                    {unreadCount} urgentes
-                  </span>
+                  {unreadCount > 0 ? (
+                    <span className="px-1.5 py-0.5 rounded bg-[#dae1ff] text-[#011848] text-[10px] font-bold">
+                      {unreadCount} urgentes
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded bg-[#d0f5e5] text-[#005138] text-[10px] font-bold">
+                      À jour
+                    </span>
+                  )}
                 </div>
-                <span className="text-[11px] text-[#4b5d8f] cursor-pointer hover:underline">
-                  Tout marquer lu
-                </span>
+                {unreadCount > 0 && onMarkAllNotificationsRead && (
+                  <button
+                    onClick={onMarkAllNotificationsRead}
+                    className="text-[11px] text-[#4b5d8f] hover:text-[#011848] font-bold cursor-pointer hover:underline"
+                  >
+                    Tout marquer lu
+                  </button>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto">
-                {notifications.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`p-2.5 rounded-lg flex flex-col gap-1 transition-colors ${
-                      item.type === 'urgent'
-                        ? 'bg-[#ffdad6]/40 hover:bg-[#ffdad6]/60'
-                        : item.type === 'warning'
-                        ? 'bg-[#dae1ff]/30 hover:bg-[#dae1ff]/50'
-                        : 'bg-[#f6f3f2] hover:bg-[#eae7e7]'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-bold text-[12.5px] text-[#1b1c1c] leading-tight">
-                        {item.title}
-                      </span>
-                      <span className="text-[10px] text-[#8d7168] whitespace-nowrap">
-                        {item.time}
-                      </span>
-                    </div>
-                    <p className="text-[11.5px] text-[#594139] leading-snug">{item.desc}</p>
-                    {item.actionText && (
-                      <button
-                        onClick={() => {
-                          setNotifOpen(false);
-                          if (onActionClick) onActionClick(item);
-                        }}
-                        className="mt-1 text-left text-[11px] font-bold text-[#ff6b35] hover:underline flex items-center gap-1"
-                      >
-                        <span>{item.actionText}</span>
-                        <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                      </button>
-                    )}
+                {notifications.length === 0 ? (
+                  <div className="py-6 text-center text-[12px] text-[#8d7168]">
+                    Aucune alerte enregistrée
                   </div>
-                ))}
+                ) : (
+                  notifications.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`p-2.5 rounded-lg flex flex-col gap-1 transition-colors ${
+                        item.type === 'urgent'
+                          ? 'bg-[#ffdad6]/40 hover:bg-[#ffdad6]/60'
+                          : item.type === 'warning'
+                          ? 'bg-[#dae1ff]/30 hover:bg-[#dae1ff]/50'
+                          : 'bg-[#f6f3f2] hover:bg-[#eae7e7]'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-bold text-[12.5px] text-[#1b1c1c] leading-tight">
+                          {item.title}
+                        </span>
+                        <span className="text-[10px] text-[#8d7168] whitespace-nowrap">
+                          {item.time}
+                        </span>
+                      </div>
+                      <p className="text-[11.5px] text-[#594139] leading-snug">{item.desc}</p>
+                      {item.actionText && (
+                        <button
+                          onClick={() => {
+                            setNotifOpen(false);
+                            if (onActionClick) onActionClick(item);
+                          }}
+                          className="mt-1 text-left text-[11px] font-bold text-[#ff6b35] hover:underline flex items-center gap-1"
+                        >
+                          <span>{item.actionText}</span>
+                          <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}

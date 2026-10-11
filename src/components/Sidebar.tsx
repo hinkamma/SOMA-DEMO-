@@ -6,6 +6,7 @@ interface SidebarProps {
   onNavigate: (screen: NavScreenId) => void;
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
+  onOpenAppel?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -13,6 +14,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNavigate,
   mobileOpen = false,
   onCloseMobile,
+  onOpenAppel,
 }) => {
   const handleNav = (screen: NavScreenId) => {
     onNavigate(screen);
@@ -134,6 +136,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 Vie Scolaire & Discipline
               </span>
             </div>
+            {onOpenAppel && (
+              <button
+                onClick={() => {
+                  onOpenAppel();
+                  if (onCloseMobile) onCloseMobile();
+                }}
+                className="w-full text-left flex items-center justify-between px-3 py-2 rounded-lg bg-[#006c4c]/10 hover:bg-[#006c4c] text-[#006c4c] hover:text-white transition-all font-bold group mb-1"
+                title="L'enseignant fait l'appel en classe (classes affectées uniquement)"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-[20px] text-[#006c4c] group-hover:text-white">
+                    checklist_rtl
+                  </span>
+                  <span className="text-[13px]">Faire l'Appel de Cours</span>
+                </div>
+                <span className="px-1.5 py-0.5 rounded text-[9.5px] font-extrabold bg-[#006c4c] text-white group-hover:bg-white group-hover:text-[#006c4c]">
+                  PROFS
+                </span>
+              </button>
+            )}
             <button
               onClick={() => handleNav('surveillance-discipline')}
               className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
